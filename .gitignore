@@ -1,6 +1,80 @@
+# Node dependencies
 node_modules/
+functions/node_modules/
+
+# Build output
 build/
-.firebase/
-functions/serviceAccountKey.json
-.env
 dist/
+functions/lib/
+functions/dist/
+
+# Firebase local files & emulators
+.firebase/
+firestore-debug.log
+firebase-debug.log
+
+# Environment variables and secrets
+.env
+.env.*
+.env.local
+.env.*.local
+functions/.env
+functions/.env.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# IDE/editor folders and settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Test coverage
+coverage/
+functions/coverage/
+
+# Misc
+*.log
+*.tgz
+
+# Optional: Ignore lock files if you don't want to commit them
+# package-lock.json
+# yarn.lock
+
+# Ignore Firebase cache and artifacts
+.firebase/
+.firebaserc
+
+# Ignore Mac system files
+*.swp
+
+# Ignore VS Code launch configs
+.vscode/launch.json
+
+# Ignore any secrets or credentials
+*.key
+*.pem
+*.crt
+*.p12
+*.jks
+
+# Ignore local tasks and settings
+tasks.json
+
+# Ignore any custom config or debug files
+functions/debugger.json
+functions-index.json
+functions-package.json
