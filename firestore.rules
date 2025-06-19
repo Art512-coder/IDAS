@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Function to check if the request is from a Cloud Function (admin context)
+    // IMPORTANT: For production, consider using custom claims or specific service account UIDs
+    // to identify admin context more robustly. For simple scheduled functions, request.auth == null
+    // or checks against service account UID can work.
+    function isAdminContext() {
+      // This is a simplified check for demo.
+      // A more robust check might involve:
+      // 1. `request.auth.token.admin == true` (if using custom claims)
+      // 2. Checking `request.auth.uid` against a known admin UID (if you have one manually set up)
+      // For scheduled functions, they run as a service account, which might present as `request.auth == null`
+      // or have a specific UID that you can hardcode here for validation.
+      return request.auth == null || request.auth.token.firebase.sign_in_provider == 'custom'; // Simplified for demo/testing
+    }
+
+    match /artifacts/{appId} {
+
+      // User Profiles:
+      // Authenticated users can read any profile data (e.g., to display usernames on leaderboard).
+      // Users can write (create/update) only their own profile data.
+      match /users/{userId}/profile/data {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && request.auth.uid == userId;
+      }
+
+      // NFL Weekly Data (nflWeeks):
+      // All authenticated users can read the week's game data (odds, scores).
+      // Only Cloud Functions (admin context) can write to this collection.
+      match /nflWeeks/{weekId} {
+        allow read: if isAuthenticated();
+        // Allow writes only from Cloud Functions (admin context)
+        // Ensure your Cloud Functions use credentials that pass this check.
+        allow write: if isAuthenticated() && isAdminContext();
+        // If your Cloud Functions are NOT authenticated as a specific user,
+        // and you're relying on them running with a service account,
+        // `isAdminContext()` might need to be adjusted or more permissive during testing.
+      }
+
+      // User Predictions:
+      match /users/{userId}/predictions/{weekId} {
+        // Allow users to create/update their own predictions ONLY if the betting window is open.
+        // This reads the bettingWindowEnd from the nflWeeks document for the specific week.
+        allow create, update: if isAuthenticated()
+                                && request.auth.uid == userId
+                                && request.time < get(/databases/$(database)/documents/artifacts/$(appId)/nflWeeks/$(weekId)).data.bettingWindowEnd;
+
+        // Users can always read their own predictions.
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+
+        // Users can read *other users'* predictions ONLY after the picks reveal time.
+        // This reads the picksRevealTime from the nflWeeks document for the specific week.
+        allow read: if isAuthenticated()
+                     && request.auth.uid != userId // Not their own document
+                     && request.time >= get(/databases/$(database)/documents/artifacts/$(appId)/nflWeeks/$(weekId)).data.picksRevealTime;
+      }
+
+      // Lottery Data:
+      // Authenticated users can read the lottery data.
+      // Authenticated users can write (for buying tickets).
+      // The drawing mechanism update should ideally be by Cloud Function only.
+      match /lottery/{document=**} { // Use {document=**} to match the document and any subcollections/nested paths
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() || isAdminContext(); // Allow users to buy tickets, functions to update draw
+      }
+
+      // Leaderboards:
+      // All authenticated users can read the leaderboard data.
+      // Only Cloud Functions (admin context) can write to this collection.
+      match /leaderboards/{weekId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && isAdminContext(); // For functions to update leaderboards
+      }
+    }
+
+    // Default rule: deny all other read/write unless explicitly allowed above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

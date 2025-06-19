@@ -1,0 +1,20 @@
+predictpro/
+├── src/
+│   ├── components/
+│   │   ├── NFLGamePicks.js
+│   │   └── LeaderboardDashboard.js
+│   ├── contexts.js  // Assumed existing file for Firebase and User contexts
+│   ├── App.js
+│   └── index.js
+├── functions/
+│   ├── index.js
+│   ├── package.json
+│   └── serviceAccountKey.json  // Firebase service account key (not included, download from Firebase Console)
+├── public/
+│   └── index.html  // Default Create React App file
+├── package.json
+├── firebase.json
+├── firestore.rules
+├── tailwind.config.js
+├── postcss.config.js
+└── .firebaserc

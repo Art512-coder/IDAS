@@ -1,0 +1,8 @@
+exports.syncNflDataAndSettle = onSchedule({
+    schedule: 'every 1 minute',
+    timeoutSeconds: 300,
+    memory: '512MiB',
+    minInstances: 1 // Keep at least 1 instance warm
+}, async (event) => {
+    // ... function body ...
+});
