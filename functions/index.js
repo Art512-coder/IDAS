@@ -1,12 +1,12 @@
 // functions/index.js
-
-const admin = require('firebase-admin');
-// Import specific function types for Firebase Functions v2
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
-const logger = require('firebase-functions/logger'); // Recommended logger for v2
+const { setGlobalOptions } = require('firebase-functions/v2');
+const logger = require('firebase-functions/logger');
+const admin = require('firebase-admin');
+const axios = require('axios');
 
-const axios = require('axios'); // For making HTTP requests
+setGlobalOptions({ region: 'us-central1' }); // Set default region for all functions
 
 admin.initializeApp(); // Initialize Firebase Admin SDK
 const db = admin.firestore(); // Get Firestore instance
@@ -60,7 +60,12 @@ function getCurrentNFLWeekInfo() {
 // This function is called by the frontend to initiate fetching current NFL odds.
 // It also updates the 'nflWeeks' collection in Firestore.
 // Using onCall for v2 callable functions.
-exports.getNFLOdds = onCall(async (data) => { // `context` is available on the `data` object if needed: `data.auth`, etc.
+exports.getNFLOdds = onCall({
+    timeoutSeconds: 30,
+    memory: '256MiB', // Or higher if needed
+    minInstances: 1 // <--- Consider adding this if frontend feels slow
+}, async (data) => {
+    // ... function body ...exports.getNFLOdds = onCall(async (data) => { // `context` is available on the `data` object if needed: `data.auth`, etc.
     // Ensure API key is available
     if (!ODDS_API_KEY) {
         logger.error("Odds API Key not configured.");
@@ -131,7 +136,14 @@ exports.getNFLOdds = onCall(async (data) => { // `context` is available on the `
 
 // --- Scheduled Function: syncNflDataAndSettle ---
 // Using onSchedule for v2 scheduled functions.
-exports.syncNflDataAndSettle = onSchedule('every 1 minute', async (event) => {
+exports.syncNflDataAndSettle = onSchedule({
+  schedule: 'every 1 minute',
+  timeoutSeconds: 300,
+  memory: '512MiB',
+  cpu: 1,
+  minInstances: 1
+}, async (event) => {
+  // function body...
     // `event` parameter is available for scheduled functions (e.g., event.id, event.time)
     
     // IMPORTANT: Replace "default-app-id" with your actual Firebase project ID
@@ -146,7 +158,7 @@ exports.syncNflDataAndSettle = onSchedule('every 1 minute', async (event) => {
     const weekDocRef = db.collection(`artifacts/${appId}/nflWeeks`).doc(weekInfo.weekId);
 
     try {
-        const weekDocSnap = await weekDocRef.get();
+        const weekDocSnap = await weekDocRef.get(); // <-- FIXED
         if (!weekDocSnap.exists) {
             logger.info(`No week data found for ${weekInfo.weekId}. Skipping sync/settle for now. Frontend should call getNFLOdds first.`);
             return null;
